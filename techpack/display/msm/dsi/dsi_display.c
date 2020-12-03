@@ -5685,6 +5685,9 @@ int dsi_display_dev_probe(struct platform_device *pdev)
 	display->panel_node = panel_node;
 	display->pdev = pdev;
 	display->boot_disp = boot_disp;
+#ifdef CONFIG_TARGET_PROJECT_C3Q
+	display->is_prim_display = true;
+#endif
 
 	dsi_display_parse_cmdline_topology(display, index);
 
