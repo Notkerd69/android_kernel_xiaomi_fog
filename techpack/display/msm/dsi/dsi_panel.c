@@ -372,7 +372,9 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 			goto exit;
 		}
 	}
+#ifdef CONFIG_TARGET_PROJECT_K7T
 	usleep_range(10000, 10010);
+#endif
 	if (r_config->count) {
 		rc = gpio_direction_output(r_config->reset_gpio,
 			r_config->sequence[0].level);
@@ -453,8 +455,10 @@ static int dsi_panel_set_pinctrl_state(struct dsi_panel *panel, bool enable)
 static int dsi_panel_power_on(struct dsi_panel *panel)
 {
 	int rc = 0;
+#ifdef CONFIG_TARGET_PROJECT_K7T
 	int power_status = DRM_PANEL_BLANK_UNBLANK;
 	struct drm_panel_notifier notifier_data;
+#endif
 
 	rc = dsi_pwr_enable_regulator(&panel->power_info, true);
 	if (rc) {
@@ -470,11 +474,13 @@ static int dsi_panel_power_on(struct dsi_panel *panel)
 	}
 
 	rc = dsi_panel_reset(panel);
+#ifdef CONFIG_TARGET_PROJECT_K7T
 	notifier_data.data = &power_status;
 	notifier_data.refresh_rate = 90;
 	notifier_data.id = 1;
 	DSI_INFO("[%s]: dsi panel power on\n", __func__);
 	drm_panel_notifier_call_chain(&panel->drm_panel, DRM_PANEL_EVENT_BLANK, &notifier_data);
+#endif
 	if (rc) {
 		DSI_ERR("[%s] failed to reset panel, rc=%d\n", panel->name, rc);
 		goto error_disable_gpio;
@@ -511,7 +517,9 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 {
 	int rc = 0;
 
+#ifdef CONFIG_TARGET_PROJECT_K7T
 	usleep_range(11000, 11010);
+#endif
 
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
@@ -4603,6 +4611,7 @@ int dsi_panel_enable(struct dsi_panel *panel)
 		       panel->name, rc);
 	else
 		panel->panel_initialized = true;
+#ifdef CONFIG_TARGET_PROJECT_K7T
 	DSI_INFO("[%s]: dsi panel send DSI_CMD_SET_ON\n", __func__);
 	if (panel->cur_mode->timing.refresh_rate == 90) {
 		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DISP_BC_90HZ);
@@ -4614,6 +4623,7 @@ int dsi_panel_enable(struct dsi_panel *panel)
 			DSI_INFO("%s: refresh_rate = %d\n", __func__, panel->cur_mode->timing.refresh_rate);
 		}
 	}
+#endif
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -4676,7 +4686,9 @@ int dsi_panel_disable(struct dsi_panel *panel)
 
 	/* Avoid sending panel off commands when ESD recovery is underway */
 	if (!atomic_read(&panel->esd_recovery_pending)) {
+#ifdef CONFIG_TARGET_PROJECT_K7T
 		panel->panel_initialized = false;
+#endif
 		/*
 		 * Need to set IBB/AB regulator mode to STANDBY,
 		 * if panel is going off from AOD mode.
@@ -4735,8 +4747,10 @@ error:
 int dsi_panel_post_unprepare(struct dsi_panel *panel)
 {
 	int rc = 0;
+#ifdef CONFIG_TARGET_PROJECT_K7T
 	int power_status = DRM_PANEL_BLANK_POWERDOWN;
 	struct drm_panel_notifier notifier_data;
+#endif
 
 	if (!panel) {
 		DSI_ERR("invalid params\n");
@@ -4752,18 +4766,20 @@ int dsi_panel_post_unprepare(struct dsi_panel *panel)
 		goto error;
 	}
 
+#ifdef CONFIG_TARGET_PROJECT_K7T
 	notifier_data.data = &power_status;
 	notifier_data.refresh_rate = 90;
 	notifier_data.id = 1;
 	DSI_INFO("[%s]: dsi panel power off\n", __func__);
 	drm_panel_notifier_call_chain(&panel->drm_panel, DRM_PANEL_EARLY_EVENT_BLANK, &notifier_data);
+#endif
 
 error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
 
-
+#ifdef CONFIG_TARGET_PROJECT_K7T
 void dsi_set_backlight_control(struct dsi_panel *panel,
 			 struct dsi_display_mode *adj_mode)
 {
@@ -4798,6 +4814,7 @@ void dsi_set_backlight_control(struct dsi_panel *panel,
 
 	return;
 }
+#endif
 
 int dsi_panel_apply_hbm_mode(struct dsi_panel *panel)
 {
