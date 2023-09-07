@@ -9,9 +9,11 @@
 #include <drm/drm_panel.h>
 #include <linux/notifier.h>
 #ifdef CONFIG_TARGET_PROJECT_C3Q
-#include <drm/drm_bridge.h>
 #include <linux/pm_wakeup.h>
 #endif
+#include <drm/drm_panel.h>
+#include <linux/notifier.h>
+#include <drm/drm_bridge.h>
 
 #include "msm_kms.h"
 #include "sde_connector.h"
@@ -77,6 +79,42 @@ static struct delayed_work prim_panel_work;
 static atomic_t prim_panel_is_on;
 static struct wakeup_source prim_panel_wakelock;
 #endif
+
+struct drm_notify_data g_notify_data;
+
+/*
+ *	drm_register_client - register a client notifier
+ *	@nb:notifier block to callback when event happen
+ */
+int drm_register_client(struct notifier_block *nb)
+{
+	pr_err("%s,%d\n",__func__,__LINE__);
+	return blocking_notifier_chain_register(&drm_notifier_list, nb);
+}
+EXPORT_SYMBOL(drm_register_client);
+
+/*
+ *	drm_unregister_client - unregister a client notifier
+ *	@nb:notifier block to callback when event happen
+ */
+int drm_unregister_client(struct notifier_block *nb)
+{
+	pr_err("%s,%d\n",__func__,__LINE__);
+	return blocking_notifier_chain_unregister(&drm_notifier_list, nb);
+}
+EXPORT_SYMBOL(drm_unregister_client);
+
+/*
+ *	drm_notifier_call_chain - notify clients of drm_event
+ *
+ */
+
+int drm_notifier_call_chain(unsigned long val, void *v)
+{
+	pr_err("%s,%d,val = %d\n",__func__,__LINE__,val);
+	return blocking_notifier_call_chain(&drm_notifier_list, val, v);
+}
+EXPORT_SYMBOL(drm_notifier_call_chain);
 
 static void convert_to_dsi_mode(const struct drm_display_mode *drm_mode,
 				struct dsi_display_mode *dsi_mode)
@@ -217,7 +255,6 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
 	struct drm_device *dev = bridge->dev;
 	int event = 0;
-        struct drm_notify_data g_notify_data;
 
 	/*add for thermal begin*/
 	if (dev->doze_state == DRM_BLANK_POWERDOWN) {
@@ -240,6 +277,10 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 
 	if (bridge->encoder->crtc->state->active_changed)
 		atomic_set(&c_bridge->display->panel->esd_recovery_pending, 0);
+
+	/*add for thermal begin*/
+	drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
+	/*add for thermal end*/
 
 	/*add for thermal begin*/
 	drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
@@ -439,7 +480,6 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 	struct dsi_bridge *c_bridge = to_dsi_bridge(bridge);
 	struct drm_device *dev = bridge->dev;
 	int event = 0;
-        struct drm_notify_data g_notify_data;
 
 	/*add for thermal begin*/
 	if (dev->doze_state == DRM_BLANK_UNBLANK) {
@@ -515,6 +555,10 @@ static void prim_panel_off_delayed_work(struct work_struct *work)
 	}
 	mutex_unlock(&gbridge->base.lock);
 #endif
+
+	/*add for thermal begin*/
+	drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
+	/*add for thermal end*/
 }
 
 static void dsi_bridge_mode_set(struct drm_bridge *bridge,
