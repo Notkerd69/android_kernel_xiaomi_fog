@@ -555,10 +555,6 @@ static void prim_panel_off_delayed_work(struct work_struct *work)
 	}
 	mutex_unlock(&gbridge->base.lock);
 #endif
-
-	/*add for thermal begin*/
-	drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
-	/*add for thermal end*/
 }
 
 static void dsi_bridge_mode_set(struct drm_bridge *bridge,
