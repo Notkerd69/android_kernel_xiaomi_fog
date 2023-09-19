@@ -138,6 +138,7 @@ kernel/configs/android-*.cfg
 
 # vendor device tree directories
 arch/arm64/boot/dts/vendor/
+new_/
 
 # Tech package directories
 techpack/
@@ -149,3 +150,6 @@ drivers/staging/rtmm/
 include/linux/ktrace.h
 include/linux/rtmm.h
 
+# Ignored Paths
+out/
+tc/
