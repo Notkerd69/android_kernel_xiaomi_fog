@@ -7,7 +7,8 @@ SECONDS=0 # builtin bash timer
 ZIPNAME="RedznnX-$(date '+%Y%m%d-%H%M').zip"
 TC_DIR="$(pwd)/tc/clang-r450784e"
 AK3_DIR="$(pwd)/android/AnyKernel3"
-DEFCONFIG="vendor/spes-perf_defconfig"
+KSU_DIR="$(pwd)/KernelSU"
+DEFCONFIG="vendor/fog-perf_defconfig"
 
 if test -z "$(git rev-parse --show-cdup 2>/dev/null)" &&
    head=$(git rev-parse --verify HEAD 2>/dev/null); then
@@ -22,6 +23,14 @@ if ! [ -d "$TC_DIR" ]; then
 		echo "Cloning failed! Aborting..."
 		exit 1
 	fi
+fi
+
+if ! [ -d "$KSU_DIR" ]; then
+        echo "KernelSU not found! Cloning to $KSU_DIR..."
+        if ! curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash - ; then
+                echo "Cloning failed! Aborting..."
+                exit 1
+        fi
 fi
 
 if [[ $1 = "-r" || $1 = "--regen" ]]; then
