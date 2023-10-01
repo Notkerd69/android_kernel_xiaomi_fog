@@ -137,6 +137,7 @@ struct dsi_backlight_config {
 #ifdef CONFIG_TARGET_PROJECT_K7T
 	/* DCS params */
 	u32 doze_brightness;
+	u32 backlight_delay_level;
 #endif
 };
 
@@ -237,6 +238,7 @@ struct dsi_panel {
 #ifdef CONFIG_TARGET_PROJECT_K7T
 	u32 dsi_refresh_flag;
 	bool is_aod;
+	struct delayed_work nolp_bl_delay_work;
 #endif
     int hbm_mode;
 };

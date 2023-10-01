@@ -695,6 +695,15 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_TARGET_PROJECT_K7T
+	if ((panel->power_mode == SDE_MODE_DPMS_LP1 || panel->power_mode == SDE_MODE_DPMS_LP2)
+			&& (bl_lvl > 0) && panel->is_aod) {
+		DSI_ERR("[%s]: panel skip set backlight = bl_lvl\n", __func__, bl_lvl);
+		panel->bl_config.backlight_delay_level = bl_lvl;
+		return 0;
+	}
+#endif
+
 	dsi = &panel->mipi_device;
 	bl = &panel->bl_config;
 
@@ -3442,6 +3451,19 @@ end:
 	utils->node = panel->panel_of_node;
 }
 
+#ifdef CONFIG_TARGET_PROJECT_K7T
+static void nolp_backlight_delayed_work(struct work_struct *work)
+{
+	struct dsi_panel *panel = container_of(work,
+				struct dsi_panel, nolp_bl_delay_work.work);
+
+	panel->is_aod = false;
+	dsi_panel_set_backlight(panel, panel->bl_config.backlight_delay_level);
+	DSI_INFO("%s: set brightness = %d\n", __func__, panel->bl_config.backlight_delay_level);
+
+}
+#endif
+
 struct dsi_panel *dsi_panel_get(struct device *parent,
 				struct device_node *of_node,
 				struct device_node *parser_node,
@@ -3548,6 +3570,10 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	rc = dsi_panel_parse_esd_config(panel);
 	if (rc)
 		DSI_DEBUG("failed to parse esd config, rc=%d\n", rc);
+
+#ifdef CONFIG_TARGET_PROJECT_K7T
+	INIT_DELAYED_WORK(&panel->nolp_bl_delay_work, nolp_backlight_delayed_work);
+#endif
 
 	panel->power_mode = SDE_MODE_DPMS_OFF;
 	drm_panel_init(&panel->drm_panel);
@@ -4268,6 +4294,10 @@ int dsi_panel_set_nolp(struct dsi_panel *panel)
 	if (rc)
 		DSI_ERR("[%s] failed to send DSI_CMD_SET_NOLP cmd, rc=%d\n",
 		       panel->name, rc);
+
+#ifdef CONFIG_TARGET_PROJECT_K7T
+	schedule_delayed_work(&panel->nolp_bl_delay_work, msecs_to_jiffies(50));
+#endif
 exit:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
