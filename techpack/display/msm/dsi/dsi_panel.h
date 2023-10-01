@@ -133,6 +133,11 @@ struct dsi_backlight_config {
 	/* WLED params */
 	struct led_trigger *wled;
 	struct backlight_device *raw_bd;
+
+#ifdef CONFIG_TARGET_PROJECT_K7T
+	/* DCS params */
+	u32 doze_brightness;
+#endif
 };
 
 struct dsi_reset_seq {
@@ -231,6 +236,7 @@ struct dsi_panel {
 
 #ifdef CONFIG_TARGET_PROJECT_K7T
 	u32 dsi_refresh_flag;
+	bool is_aod;
 #endif
     int hbm_mode;
 };
@@ -356,6 +362,9 @@ void dsi_panel_calc_dsi_transfer_time(struct dsi_host_common_cfg *config,
 #ifdef CONFIG_TARGET_PROJECT_K7T
 void dsi_set_backlight_control(struct dsi_panel *panel,
 			 struct dsi_display_mode *adj_mode);
+
+ssize_t dsi_panel_set_doze_brightness(struct dsi_panel *panel,
+			int doze_brightness);
 
 #endif
 

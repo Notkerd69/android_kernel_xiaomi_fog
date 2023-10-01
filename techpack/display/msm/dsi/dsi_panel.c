@@ -1868,6 +1868,8 @@ const char *cmd_set_prop_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-on-commands",
 	"qcom,mdss-dsi-qsync-off-commands",
 #ifdef CONFIG_TARGET_PROJECT_K7T
+	"qcom,mdss-dsi-doze-hbm-command",
+	"qcom,mdss-dsi-doze-lbm-command",
 	"qcom,mdss-dsi-dispparam-hbm-on-command",
 	"qcom,mdss-dsi-dispparam-hbm-off-command",
 	"qcom,mdss-dsi-hbm1-on-command",
@@ -1902,6 +1904,8 @@ const char *cmd_set_state_map[DSI_CMD_SET_MAX] = {
 	"qcom,mdss-dsi-qsync-on-commands-state",
 	"qcom,mdss-dsi-qsync-off-commands-state",
 #ifdef CONFIG_TARGET_PROJECT_K7T
+	"qcom,mdss-dsi-doze-hbm-command-state",
+	"qcom,mdss-dsi-doze-lbm-command-state"
 	"qcom,mdss-dsi-dispparam-hbm-on-command-state",
 	"qcom,mdss-dsi-dispparam-hbm-off-command-state",
 	"qcom,mdss-dsi-hbm1-on-command-state",
@@ -4819,6 +4823,45 @@ int dsi_panel_apply_hbm_mode(struct dsi_panel *panel)
 }
 
 #ifdef CONFIG_TARGET_PROJECT_K7T
+ssize_t dsi_panel_set_doze_brightness(struct dsi_panel *panel,
+			int doze_brightness)
+{
+	ssize_t rc = 0;
+
+	if (!panel) {
+		DSI_ERR("Invalid params\n");
+		return -EINVAL;
+	}
+	if (!dsi_panel_initialized(panel)) {
+		DSI_ERR("%s: panel not yet initialized\n", __func__);
+		return -EINVAL;
+	}
+
+	mutex_lock(&panel->panel_lock);
+	if (doze_brightness == 2) {
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DOZE_LBM);
+		if (rc)
+			DSI_ERR("[%s][%s] failed to send DSI_CMD_SET_DOZE_LBM cmd, rc=%d\n",
+					__func__, panel->name, rc);
+	} else if (doze_brightness == 1) {
+		rc = dsi_panel_tx_cmd_set(panel, DSI_CMD_SET_DOZE_HBM);
+		if (rc)
+			DSI_ERR("[%s][%s] failed to send DSI_CMD_SET_DOZE_HBM cmd, rc=%d\n",
+					__func__, panel->name, rc);
+	} else if (doze_brightness == 0) {
+		//dsi_panel_set_backlight(panel, bl_config.bl_last_level);
+	} else {
+		DSI_ERR("%s: panel doze_brightness is invalid = %d\n", __func__, doze_brightness);
+	}
+	if (!rc) {
+		panel->bl_config.doze_brightness = doze_brightness;
+		DSI_INFO("%s: panel set doze_brightness = %d\n", __func__, doze_brightness);
+	}
+	mutex_unlock(&panel->panel_lock);
+
+	return rc;
+}
+
 static int dsi_panel_dc_dim_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
 {
 	struct drm_notify_data *evdata = data;

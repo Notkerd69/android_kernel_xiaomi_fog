@@ -23,6 +23,9 @@
 #include "dsi_parser.h"
 
 #define to_dsi_display(x) container_of(x, struct dsi_display, host)
+#ifdef CONFIG_TARGET_PROJECT_K7T
+#define to_dsi_bridge(x)     container_of((x), struct dsi_bridge, base)
+#endif
 #define INT_BASE_10 10
 
 #define MISR_BUFF_SIZE	256
@@ -1077,20 +1080,29 @@ int dsi_display_set_power(struct drm_connector *connector,
 
 	switch (power_mode) {
 	case SDE_MODE_DPMS_LP1:
+#ifdef CONFIG_TARGET_PROJECT_K7T
+		display->panel->is_aod = true;
+#endif
 		DSI_DEBUG("SDE_MODE_DPMS_LP1\n");
 		event = DRM_BLANK_POWERDOWN;
 		g_notify_data.data = &event;
 		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 		rc = dsi_panel_set_lp1(display->panel);
-		if (!rc)
+		DSI_INFO("[%s]: panel set lp1", __func__);
 		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
 		break;
 	case SDE_MODE_DPMS_LP2:
+#ifdef CONFIG_TARGET_PROJECT_K7T
+		display->panel->is_aod = true;
+#endif
 		drm_notifier_call_chain(DRM_EARLY_EVENT_BLANK, &g_notify_data);
 		rc = dsi_panel_set_lp2(display->panel);
 		drm_notifier_call_chain(DRM_EVENT_BLANK, &g_notify_data);
 		break;
 	case SDE_MODE_DPMS_ON:
+#ifdef CONFIG_TARGET_PROJECT_K7T
+		display->panel->is_aod = false;
+#endif
 		if ((display->panel->power_mode == SDE_MODE_DPMS_LP1) ||
 			(display->panel->power_mode == SDE_MODE_DPMS_LP2)) {
 			DSI_DEBUG("SDE_MODE_DPMS_ON\n");
@@ -1101,6 +1113,9 @@ int dsi_display_set_power(struct drm_connector *connector,
 			rc = dsi_panel_set_nolp(display->panel);
 		break;
 	case SDE_MODE_DPMS_OFF:
+#ifdef CONFIG_TARGET_PROJECT_K7T
+		display->panel->is_aod = false;
+#endif
 	default:
 		if (dev->pre_state != SDE_MODE_DPMS_LP1 &&
                                         dev->pre_state != SDE_MODE_DPMS_LP2)
@@ -8092,6 +8107,57 @@ static void __exit dsi_display_unregister(void)
 	dsi_ctrl_drv_unregister();
 	dsi_phy_drv_unregister();
 }
+
+#ifdef CONFIG_TARGET_PROJECT_K7T
+ssize_t dsi_display_set_doze_brightness(struct drm_connector *connector,
+			int doze_brightness)
+{
+	ssize_t rc;
+	struct dsi_display *display = NULL;
+	struct dsi_bridge *c_bridge = NULL;
+
+	if (!connector || !connector->encoder || !connector->encoder->bridge) {
+		DSI_ERR("Invalid connector/encoder/bridge ptr\n");
+		return -EINVAL;
+	}
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	display = c_bridge->display;
+
+	if (!display || !display->panel) {
+		DSI_ERR("Invalid display/panel ptr\n");
+		return -EINVAL;
+	}
+
+	rc = dsi_panel_set_doze_brightness(display->panel, doze_brightness);
+
+	return rc;
+}
+
+ssize_t dsi_display_get_doze_brightness(struct drm_connector *connector)
+{
+	ssize_t doze_brightness;
+	struct dsi_display *display = NULL;
+	struct dsi_bridge *c_bridge = NULL;
+
+	if (!connector || !connector->encoder || !connector->encoder->bridge) {
+		DSI_ERR("Invalid connector/encoder/bridge ptr\n");
+		return -EINVAL;
+	}
+
+	c_bridge =  to_dsi_bridge(connector->encoder->bridge);
+	display = c_bridge->display;
+
+	if (!display || !display->panel) {
+		DSI_ERR("Invalid display/panel ptr\n");
+		return -EINVAL;
+	}
+	doze_brightness = display->panel->bl_config.doze_brightness;
+
+	return doze_brightness;
+}
+#endif
+
 module_param_string(dsi_display0, dsi_display_primary, MAX_CMDLINE_PARAM_LEN,
 								0600);
 MODULE_PARM_DESC(dsi_display0,
