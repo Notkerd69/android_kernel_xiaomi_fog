@@ -231,6 +231,7 @@ static ssize_t modes_show(struct device *device,
 }
 
 #ifdef CONFIG_TARGET_PROJECT_K7T
+ /* Xiaomi Panel Info */
 extern int drm_get_panel_info(struct drm_bridge *bridge, char *name);
 static ssize_t panel_info_show(struct device *device,
 			    struct device_attribute *attr,
@@ -263,6 +264,34 @@ static ssize_t panel_info_show(struct device *device,
 		return snprintf(buf, PAGE_SIZE, "panel_name=%s_display\n", pname_temp);
 	}
 	return written;
+}
+
+ /* Xiaomi doze Brightness */
+static ssize_t doze_brightness_show(struct device *device,
+				struct device_attribute *attr,
+				char *buf)
+{
+	int doze_brightness;
+	struct drm_connector *connector = to_drm_connector(device);
+	doze_brightness = dsi_display_get_doze_brightness(connector);
+	return sprintf(buf, "%u\n", doze_brightness);
+}
+
+static ssize_t doze_brightness_store(struct device *device,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	int doze_brightness;
+	ssize_t ret;
+
+	struct drm_connector *connector = to_drm_connector(device);
+
+	ret = kstrtoint(buf, 0, &doze_brightness);
+	if (ret)
+		return ret;
+	ret = dsi_display_set_doze_brightness(connector, doze_brightness);
+
+	return ret ? ret : count;
 }
 #endif
 
@@ -306,6 +335,9 @@ static DEVICE_ATTR_RW(status);
 static DEVICE_ATTR_RO(enabled);
 static DEVICE_ATTR_RO(dpms);
 static DEVICE_ATTR_RO(modes);
+#ifdef CONFIG_TARGET_PROJECT_K7T
+static DEVICE_ATTR_RW(doze_brightness);
+#endif
 static DEVICE_ATTR_RO(panel_info);
 
 static struct attribute *connector_dev_attrs[] = {
@@ -313,6 +345,9 @@ static struct attribute *connector_dev_attrs[] = {
 	&dev_attr_enabled.attr,
 	&dev_attr_dpms.attr,
 	&dev_attr_modes.attr,
+#ifdef CONFIG_TARGET_PROJECT_K7T
+	&dev_attr_doze_brightness.attr,
+#endif
 	&dev_attr_panel_info.attr,
 	NULL
 };
